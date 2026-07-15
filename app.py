@@ -6,72 +6,73 @@ from agent import Agent
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 
-# Single shared agent instance for the web server.
-# If your Agent keeps per-user memory, you may want to create one per
-# session instead (see note near /chat below).
 agent = Agent()
 
 
-@app.route("/")
+@app.route("/", methods=["GET"])
 def index():
-    # Serves the frontend. Put index_space.html (renamed to index.html)
-    # inside a "static" folder next to this file:
-    #   LLMMM/
-    #     app.py
-    #     static/
-    #       index.html   <-- your space-style frontend
-    return send_from_directory(app.static_folder, "index.html")
+    return send_from_directory("static", "index.html")
 
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    data = request.get_json(silent=True) or {}
-    user_input = (data.get("message") or "").strip()
-
-    if not user_input:
-        return jsonify({"response": "empty message received."}), 400
-
     try:
+        data = request.get_json(force=True)
+
+        user_input = data.get("message", "").strip()
+
+        if not user_input:
+            return jsonify({
+                "success": False,
+                "response": "Empty message."
+            }), 400
+
         response = agent.run(user_input)
-        return jsonify({"response": response})
-    except Exception as e:
+
+        return jsonify({
+            "success": True,
+            "response": response
+        })
+
+    except Exception:
         traceback.print_exc()
-        return jsonify({"response": f"error: {e}"}), 500
+        return jsonify({
+            "success": False,
+            "response": traceback.format_exc()
+        }), 500
+
+
+@app.route("/health")
+def health():
+    return jsonify({
+        "status": "ok"
+    })
 
 
 def run_cli():
-    """Original terminal mode, kept for convenience: python app.py --cli"""
     print("=" * 60)
     print("AI Agent")
     print("=" * 60)
-    print("Type 'exit' to quit.")
-    print()
+    print("Type 'exit' to quit.\n")
 
     cli_agent = Agent()
+
     while True:
         user_input = input("You: ").strip()
 
-        if not user_input:
-            continue
-
-        if user_input.lower() in ["exit"]:
+        if user_input.lower() in ["exit", "quit"]:
             break
 
         try:
             response = cli_agent.run(user_input)
-            print(f"\nAgent:  {response}\n")
-        except Exception as e:
-            print(f"Error: {e}\n")
+            print(f"\nAgent: {response}\n")
+
+        except Exception:
+            traceback.print_exc()
 
 
 if __name__ == "__main__":
     if "--cli" in sys.argv:
         run_cli()
     else:
-        print("=" * 60)
-        print("AI Agent -- web server")
-        print("=" * 60)
-        print("Open http://localhost:5000 in your browser.")
-        print("(Run 'python app.py --cli' for the old terminal mode.)")
-        print()
-        app.run(host="0.0.0.0", port=5000, debug=True)
+        app.run(host="0.0.0.0", port=5000)
