@@ -118,5 +118,21 @@
     {
         "role": "assistant",
         "content": "The result of 5-5 is 0."
+    },
+    {
+        "role": "user",
+        "content": "helo"
+    },
+    {
+        "role": "assistant",
+        "content": "Hello!"
+    },
+    {
+        "role": "user",
+        "content": "5*5"
+    },
+    {
+        "role": "assistant",
+        "content": "The result of 5*5 is 25."
     }
 ]
